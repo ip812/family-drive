@@ -15,6 +15,8 @@
     "publish": true
   },
   "dependencies": {
+    "@libsql/client": "^0.17.0",
+    "drizzle-orm": "^0.45.1",
     "hono": "4.11.1",
     "isbot": "5.1.32",
     "react": "19.2.1",
@@ -23,7 +25,7 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.15.3",
-    "@react-router/dev": "7.9.6",
+    "@react-router/dev": "^7.9.6",
     "@tailwindcss/vite": "4.1.17",
     "@types/node": "24.10.1",
     "@types/react": "19.2.7",
