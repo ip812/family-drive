@@ -19,33 +19,37 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const id = Number(params.id);
   if (isNaN(id)) return { album: null as AlbumResponse | null };
 
-  const db = drizzle(context.cloudflare.env.DB!);
+  try {
+    const db = drizzle(context.cloudflare.env.DB!);
 
-  const rows = await db
-    .select({
-      id: albums.id,
-      name: albums.name,
-      createdAt: albums.createdAt,
-      imageCount: sql<number>`COUNT(${images.id})`,
-      coverKey: sql<string | null>`MIN(CASE WHEN ${images.id} IS NOT NULL THEN ${images.r2Key} END)`,
-    })
-    .from(albums)
-    .leftJoin(images, eq(images.albumId, albums.id))
-    .where(eq(albums.id, id))
-    .groupBy(albums.id);
+    const rows = await db
+      .select({
+        id: albums.id,
+        name: albums.name,
+        createdAt: albums.createdAt,
+        imageCount: sql<number>`COUNT(${images.id})`,
+        coverKey: sql<string | null>`MIN(CASE WHEN ${images.id} IS NOT NULL THEN ${images.r2Key} END)`,
+      })
+      .from(albums)
+      .leftJoin(images, eq(images.albumId, albums.id))
+      .where(eq(albums.id, id))
+      .groupBy(albums.id);
 
-  if (rows.length === 0) return { album: null as AlbumResponse | null };
+    if (rows.length === 0) return { album: null as AlbumResponse | null };
 
-  const r = rows[0];
-  const album: AlbumResponse = {
-    id: r.id,
-    name: r.name,
-    createdAt: r.createdAt,
-    imageCount: Number(r.imageCount),
-    coverKey: r.coverKey ?? null,
-  };
+    const r = rows[0];
+    const album: AlbumResponse = {
+      id: r.id,
+      name: r.name,
+      createdAt: r.createdAt,
+      imageCount: Number(r.imageCount),
+      coverKey: r.coverKey ?? null,
+    };
 
-  return { album };
+    return { album };
+  } catch {
+    return { album: null as AlbumResponse | null };
+  }
 }
 
 export default function AlbumDetail({ loaderData, params }: Route.ComponentProps) {
