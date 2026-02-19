@@ -17,11 +17,7 @@ import { postV1 } from '../../http/client';
 import { isToast } from '../../toasts';
 import type { AlbumRequest, AlbumResponse } from '../../types/albums';
 
-interface AddAlbumDialogProps {
-  onCreated?: () => void;
-}
-
-const AddAlbumDialog = ({ onCreated }: AddAlbumDialogProps) => {
+const AddAlbumDialog = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
@@ -50,11 +46,7 @@ const AddAlbumDialog = ({ onCreated }: AddAlbumDialogProps) => {
 
     setOpen(false);
     setName('');
-    if (onCreated) {
-      onCreated();
-    } else {
-      navigate(`/albums/${result.id}`);
-    }
+    navigate(`/albums/${result.id}`);
   };
 
   return (

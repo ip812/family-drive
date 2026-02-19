@@ -3,6 +3,9 @@
 	"name": "family-drive",
 	"compatibility_date": "2025-10-08",
 	"main": "./workers/app.ts",
+	"assets": {
+		"binding": "ASSETS"
+	},
 	"observability": {
 		"enabled": true
 	},

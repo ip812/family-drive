@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { createRequestHandler } from "react-router";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, sql, desc, lt } from "drizzle-orm";
 import { albums, images } from "../db/schemas";
@@ -274,17 +273,12 @@ app.onError((err, c) => {
   return c.json(errorInternalServerError("Вътрешна грешка"), 500);
 });
 
-// ─── React Router SSR catch-all ───────────────────────────────────────────────
+// ─── SPA catch-all ───────────────────────────────────────────────────────────
 
-app.get("*", (c) => {
-  const requestHandler = createRequestHandler(
-    () => import("virtual:react-router/server-build"),
-    import.meta.env.MODE,
-  );
-
-  return requestHandler(c.req.raw, {
-    cloudflare: { env: c.env, ctx: c.executionCtx },
-  });
+app.get("*", async (c) => {
+  const url = new URL(c.req.url);
+  url.pathname = "/index.html";
+  return c.env.ASSETS!.fetch(url.toString());
 });
 
 export default app;

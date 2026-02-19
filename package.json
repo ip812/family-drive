@@ -38,6 +38,7 @@
     "@types/node": "24.10.1",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
     "drizzle-kit": "^0.31.9",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
@@ -47,13 +48,13 @@
   },
   "private": true,
   "scripts": {
-    "build": "react-router build",
+    "build": "vite build",
     "cf-typegen": "wrangler types",
-    "deploy": "npm run build && wrangler deploy",
-    "dev": "react-router dev",
+    "deploy": "npm run build && wrangler deploy --config build/client/family_drive/wrangler.json",
+    "dev": "vite dev",
     "preview": "npm run build && vite preview",
     "db:push": "drizzle-kit push --config drizzle.config.ts",
-    "typecheck": "npm run cf-typegen && react-router typegen && tsc -b"
+    "typecheck": "npm run cf-typegen && tsc -b"
   },
   "type": "module"
 }
