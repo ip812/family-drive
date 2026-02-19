@@ -21,14 +21,14 @@ async function fetchDataV1<REQ, RESP>(
     return jsonData;
   } catch (fetchError) {
     console.error("Fetch failed:", fetchError);
-    return errorInternalServerError("Network or internal fetch error");
+    return errorInternalServerError("Грешка при свързване");
   }
 }
 
 export async function getV1<RESP>(
   url: string,
 ): Promise<RESP | Toast> {
-  return await fetchDataV1<any, RESP>("GET", url, null);
+  return await fetchDataV1<unknown, RESP>("GET", url, null);
 }
 
 export async function postV1<REQ, RESP>(
@@ -48,5 +48,22 @@ export async function putV1<REQ, RESP>(
 export async function deleteV1<RESP>(
   url: string,
 ): Promise<RESP | Toast> {
-  return await fetchDataV1<any, RESP>("DELETE", url, null);
+  return await fetchDataV1<unknown, RESP>("DELETE", url, null);
+}
+
+export async function uploadV1<RESP>(
+  url: string,
+  formData: FormData,
+): Promise<RESP | Toast> {
+  try {
+    const response = await fetch("/api/v1" + url, {
+      method: "POST",
+      body: formData,
+    });
+    const jsonData: RESP | Toast = await response.json();
+    return jsonData;
+  } catch (fetchError) {
+    console.error("Upload failed:", fetchError);
+    return errorInternalServerError("Грешка при качване");
+  }
 }

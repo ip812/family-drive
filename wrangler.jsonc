@@ -3,11 +3,27 @@
 	"name": "family-drive",
 	"compatibility_date": "2025-10-08",
 	"main": "./workers/app.ts",
-	"vars": {
-		"VALUE_FROM_CLOUDFLARE": "Hello from Hono/CF"
-	},
 	"observability": {
 		"enabled": true
 	},
-	"upload_source_maps": true
+    "routes": [
+    	{
+    		"pattern": "familydrive.ip812.com",
+    		"custom_domain": true
+    	}
+    ],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "family-drive-dev-db",
+			"database_id": "00000000-0000-0000-0000-000000000000",
+			"migrations_dir": "drizzle/migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "BUCKET",
+			"bucket_name": "family-drive-dev-bucket"
+		}
+	]
 }

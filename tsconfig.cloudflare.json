@@ -6,6 +6,10 @@
 		"app/**/.server/**/*",
 		"app/**/.client/**/*",
 		"workers/**/*",
+		"db/**/*",
+		"http/**/*",
+		"toasts/**/*",
+		"types/**/*",
 		"worker-configuration.d.ts"
 	],
 	"compilerOptions": {
