@@ -16,14 +16,14 @@
 		{
 			"binding": "DB",
 			"database_name": "family-drive-dev-db",
-			"database_id": "00000000-0000-0000-0000-000000000000",
-			"migrations_dir": "drizzle/migrations"
+			"database_id": "d2e46b9c-6915-4aba-8fe5-fb07d48a1470",
+			"migrations_dir": "migrations"
 		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",
-			"bucket_name": "family-drive-dev-bucket"
+			"bucket_name": "d2e46b9c-6915-4aba-8fe5-fb07d48a1470"
 		}
 	]
 }

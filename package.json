@@ -52,6 +52,7 @@
     "deploy": "npm run build && wrangler deploy",
     "dev": "react-router dev",
     "preview": "npm run build && vite preview",
+    "db:push": "drizzle-kit push --config drizzle.config.ts",
     "typecheck": "npm run cf-typegen && react-router typegen && tsc -b"
   },
   "type": "module"
