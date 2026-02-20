@@ -272,14 +272,9 @@ app.delete("/api/v1/albums/:id", async (c) => {
 
     const albumImages = await db.select().from(images).where(eq(images.albumId, id));
 
-    const bucket = c.env.BUCKET;
-    if (bucket) {
-      for (const image of albumImages) {
-        await bucket.delete(image.r2Key);
-      }
-    }
+    if (albumImages.length > 0)
+      return c.json(warningBadRequest("Албумът съдържа снимки и не може да бъде изтрит"), 400);
 
-    await db.delete(images).where(eq(images.albumId, id));
     await db.delete(albums).where(eq(albums.id, id));
 
     return c.json(successOk("Албумът е изтрит"));

@@ -98,4 +98,25 @@ describe("AlbumCard", () => {
 
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Грешка"));
   });
+
+  it("shows an error toast when album has images", async () => {
+    vi.mocked(deleteV1).mockResolvedValue({
+      code: 400,
+      message: "Албумът съдържа снимки и не може да бъде изтрит",
+    });
+    const onDelete = vi.fn();
+
+    render(<AlbumCard album={album} onDelete={onDelete} />);
+    fireEvent.click(screen.getByTitle("Изтрий албума"));
+
+    const confirmBtn = await screen.findByRole("button", { name: "Изтрий" });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Албумът съдържа снимки и не може да бъде изтрит",
+      ),
+    );
+    expect(onDelete).not.toHaveBeenCalled();
+  });
 });
