@@ -7,7 +7,7 @@ const Navbar = () => {
       <div className="relative mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center">
         <AddAlbumDialog />
         <Link to="/" className="absolute left-1/2 -translate-x-1/2">
-          <img src="/logo.png" alt="Семеен архив" className="h-20 w-auto" />
+          <img src="/logo.png" alt="Семеен албум" className="h-20 w-auto" />
         </Link>
       </div>
     </nav>
