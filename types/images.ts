@@ -5,6 +5,7 @@ export interface ImageResponse {
   filename: string;
   takenAt: string | null;
   size: number;
+  mediaType: 'image' | 'video';
   createdAt: string;
 }
 

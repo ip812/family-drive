@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Loader2, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, X, Trash2, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { getV1, deleteV1 } from '../../http/client';
 import { isToast, isSuccess } from '../../toasts';
@@ -155,12 +155,26 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
               className="group relative overflow-hidden rounded-lg bg-muted aspect-square cursor-pointer"
               onClick={() => setSelectedIndex(idx)}
             >
-              <img
-                src={`/api/v1/images/${image.r2Key}`}
-                alt={image.filename}
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform group-hover:scale-105"
-              />
+              {image.mediaType === 'video' ? (
+                <>
+                  <video
+                    src={`/api/v1/images/${image.r2Key}`}
+                    preload="metadata"
+                    muted
+                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <Play className="size-8 text-white drop-shadow-lg" />
+                  </div>
+                </>
+              ) : (
+                <img
+                  src={`/api/v1/images/${image.r2Key}`}
+                  alt={image.filename}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                />
+              )}
               {image.takenAt && (
                 <div className="absolute bottom-0 left-0 right-0 bg-black/40 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
                   {formatDate(image.takenAt)}
@@ -227,13 +241,24 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
             </button>
           )}
 
-          {/* Image */}
-          <img
-            src={`/api/v1/images/${selectedImage.r2Key}`}
-            alt={selectedImage.filename}
-            className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {/* Media */}
+          {selectedImage.mediaType === 'video' ? (
+            <video
+              key={selectedImage.id}
+              src={`/api/v1/images/${selectedImage.r2Key}`}
+              controls
+              autoPlay
+              className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={`/api/v1/images/${selectedImage.r2Key}`}
+              alt={selectedImage.filename}
+              className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
 
           {/* Position indicator */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-3 py-1 rounded-full">

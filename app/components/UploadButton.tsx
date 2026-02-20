@@ -65,15 +65,17 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
         prev.map((item, idx) => (idx === i ? { ...item, status: 'uploading' } : item))
       );
 
-      // Parse EXIF
+      // Parse EXIF (images only)
       let takenAt: string | null = null;
-      try {
-        const exif = await exifr.parse(file, ['DateTimeOriginal']);
-        if (exif?.DateTimeOriginal instanceof Date) {
-          takenAt = exif.DateTimeOriginal.toISOString();
+      if (!file.type.startsWith('video/')) {
+        try {
+          const exif = await exifr.parse(file, ['DateTimeOriginal']);
+          if (exif?.DateTimeOriginal instanceof Date) {
+            takenAt = exif.DateTimeOriginal.toISOString();
+          }
+        } catch {
+          // No EXIF — fine
         }
-      } catch {
-        // No EXIF — fine
       }
 
       // Upload single file
@@ -95,7 +97,7 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
     setActive(false);
 
     if (totalUploaded > 0) {
-      toast.success(`${totalUploaded} снимк${totalUploaded === 1 ? 'а качена' : 'и качени'} успешно`);
+      toast.success(`${totalUploaded} файл${totalUploaded === 1 ? ' качен' : 'а качени'} успешно`);
       onUploaded();
     }
     if (errors > 0) {
@@ -111,7 +113,7 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
         ref={inputRef}
         type="file"
         multiple
-        accept="image/*"
+        accept="image/*,video/*"
         className="hidden"
         onChange={(e) => { if (e.target.files) handleFiles(e.target.files); }}
       />
@@ -121,7 +123,7 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
         variant="outline"
       >
         <Upload />
-        {active ? `Качване ${done} / ${total}…` : 'Добави снимки'}
+        {active ? `Качване ${done} / ${total}…` : 'Добави медия'}
       </Button>
 
       {queue.length > 0 && (

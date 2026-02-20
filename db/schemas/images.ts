@@ -11,6 +11,7 @@ export const images = sqliteTable('images', {
   filename: text('filename', { length: 1024 }).notNull(),
   takenAt: text('taken_at'),
   size: integer('size', { mode: 'number' }).notNull(),
+  mediaType: text('media_type').notNull().default('image'),
   createdAt: text('created_at')
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),

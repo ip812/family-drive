@@ -1,0 +1,1 @@
+ALTER TABLE `images` ADD `media_type` text DEFAULT 'image' NOT NULL;

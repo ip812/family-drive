@@ -157,6 +157,7 @@ app.get("/api/v1/albums/:id/images", async (c) => {
         filename: row.filename,
         takenAt: row.takenAt ?? null,
         size: row.size,
+        mediaType: (row.mediaType as 'image' | 'video'),
         createdAt: row.createdAt,
       })),
       nextOffset: hasMore ? offset + limit : null,
@@ -204,6 +205,11 @@ app.post("/api/v1/albums/:id/images", async (c) => {
       webp: "image/webp",
       heic: "image/heic",
       heif: "image/heif",
+      mp4: "video/mp4",
+      mov: "video/quicktime",
+      webm: "video/webm",
+      avi: "video/x-msvideo",
+      mkv: "video/x-matroska",
     };
 
     const bucket = c.env.BUCKET;
@@ -216,8 +222,9 @@ app.post("/api/v1/albums/:id/images", async (c) => {
       const meta = metadataList[i] ?? null;
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
       const contentType = contentTypeMap[ext] ?? "image/jpeg";
+      const mediaType: 'image' | 'video' = contentType.startsWith("video/") ? "video" : "image";
       const r2Key = `albums/${albumId}/${crypto.randomUUID()}.${ext}`;
-      return { file, meta, contentType, r2Key };
+      return { file, meta, contentType, mediaType, r2Key };
     });
 
     // Upload all files to R2 in parallel (File extends Blob — no arrayBuffer() needed)
@@ -234,12 +241,13 @@ app.post("/api/v1/albums/:id/images", async (c) => {
     const insertedImages = await db
       .insert(images)
       .values(
-        fileEntries.map(({ file, meta, r2Key }) => ({
+        fileEntries.map(({ file, meta, r2Key, mediaType }) => ({
           albumId,
           r2Key,
           filename: file.name,
           takenAt: meta?.takenAt ?? null,
           size: file.size,
+          mediaType,
         }))
       )
       .returning();
@@ -251,6 +259,7 @@ app.post("/api/v1/albums/:id/images", async (c) => {
       filename: image.filename,
       takenAt: image.takenAt ?? null,
       size: image.size,
+      mediaType: (image.mediaType as 'image' | 'video'),
       createdAt: image.createdAt,
     }));
 
