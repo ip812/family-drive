@@ -59,6 +59,8 @@
     "dev": "vite dev",
     "preview": "npm run build && vite preview",
     "db:push": "drizzle-kit push --config drizzle.config.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "npm run cf-typegen && tsc -b"
