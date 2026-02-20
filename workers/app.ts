@@ -142,7 +142,7 @@ app.get("/api/v1/albums/:id/images", async (c) => {
       .select()
       .from(images)
       .where(eq(images.albumId, albumId))
-      .orderBy(sql`${images.takenAt} DESC NULLS LAST`, desc(images.id))
+      .orderBy(sql`${images.takenAt} DESC NULLS FIRST`, desc(images.id))
       .limit(limit + 1)
       .offset(offset);
 
