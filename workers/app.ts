@@ -34,14 +34,13 @@ app.get("/api/v1/albums", async (c) => {
   try {
     const db = drizzle(c.env.DB!);
 
-    // Get albums with image count and the r2_key of the first (oldest) image as cover
     const rows = await db
       .select({
         id: albums.id,
         name: albums.name,
         createdAt: albums.createdAt,
         imageCount: sql<number>`COUNT(${images.id})`,
-        coverKey: sql<string | null>`MIN(CASE WHEN ${images.id} IS NOT NULL THEN ${images.r2Key} END)`,
+        coverKey: sql<string | null>`(SELECT i2.r2_key FROM images i2 WHERE i2.album_id = ${albums.id} ORDER BY i2.taken_at DESC NULLS LAST, i2.id DESC LIMIT 1)`,
       })
       .from(albums)
       .leftJoin(images, eq(images.albumId, albums.id))
@@ -102,7 +101,7 @@ app.get("/api/v1/albums/:id", async (c) => {
         name: albums.name,
         createdAt: albums.createdAt,
         imageCount: sql<number>`COUNT(${images.id})`,
-        coverKey: sql<string | null>`MIN(CASE WHEN ${images.id} IS NOT NULL THEN ${images.r2Key} END)`,
+        coverKey: sql<string | null>`(SELECT i2.r2_key FROM images i2 WHERE i2.album_id = ${albums.id} ORDER BY i2.taken_at DESC NULLS LAST, i2.id DESC LIMIT 1)`,
       })
       .from(albums)
       .leftJoin(images, eq(images.albumId, albums.id))
