@@ -47,3 +47,8 @@ A perfect starting point for building interactive, styled, and edge-deployed SPA
 - 🎨 [shadcn/ui](https://ui.shadcn.com)
 - 💨 [Tailwind CSS Documentation](https://tailwindcss.com/)
 - 🔀 [React Router Docs](https://reactrouter.com/)
+
+
+## Notes
+
+Run `npm run db:generate` when there are DB changes.
