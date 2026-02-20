@@ -10,7 +10,7 @@ export interface ImageResponse {
 
 export interface PaginatedImagesResponse {
   data: ImageResponse[];
-  nextCursor: number | null;
+  nextOffset: number | null;
   hasMore: boolean;
 }
 

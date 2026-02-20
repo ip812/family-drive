@@ -23,7 +23,7 @@ const formatDate = (dateStr: string | null) => {
 
 const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
   const [images, setImages] = useState<ImageResponse[]>([]);
-  const [nextCursor, setNextCursor] = useState<number | null>(null);
+  const [nextOffset, setNextOffset] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -35,13 +35,13 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
 
   const selectedImage = selectedIndex !== null ? images[selectedIndex] ?? null : null;
 
-  const fetchImages = useCallback(async (cursor: number | null, reset = false) => {
+  const fetchImages = useCallback(async (offset: number | null, reset = false) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setLoading(true);
 
     const params = new URLSearchParams({ limit: '20' });
-    if (cursor !== null) params.set('cursor', String(cursor));
+    if (offset !== null) params.set('offset', String(offset));
 
     const result = await getV1<PaginatedImagesResponse>(
       `/albums/${albumId}/images?${params.toString()}`,
@@ -54,14 +54,14 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
     if (isToast(result)) return;
 
     setImages((prev) => (reset ? result.data : [...prev, ...result.data]));
-    setNextCursor(result.nextCursor);
+    setNextOffset(result.nextOffset);
     setHasMore(result.hasMore);
   }, [albumId]);
 
   // Reset and reload when albumId or refreshKey changes
   useEffect(() => {
     setImages([]);
-    setNextCursor(null);
+    setNextOffset(null);
     setHasMore(true);
     setInitialLoad(true);
     setSelectedIndex(null);
@@ -90,9 +90,9 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
   useEffect(() => {
     if (selectedIndex === null) return;
     if (selectedIndex >= images.length - 3 && hasMore && !loadingRef.current) {
-      fetchImages(nextCursor);
+      fetchImages(nextOffset);
     }
-  }, [selectedIndex, images.length, hasMore, nextCursor, fetchImages]);
+  }, [selectedIndex, images.length, hasMore, nextOffset, fetchImages]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -102,7 +102,7 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
-          fetchImages(nextCursor);
+          fetchImages(nextOffset);
         }
       },
       { rootMargin: '200px' },
@@ -110,7 +110,7 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, nextCursor, fetchImages]);
+  }, [hasMore, nextOffset, fetchImages]);
 
   const handleDeleteImage = async () => {
     if (!pendingDeleteImage) return;

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, sql, desc, lt } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import { albums, images } from "../db/schemas";
 import { ToastError } from "../toasts";
 import { errorInternalServerError } from "../toasts/errors";
@@ -137,19 +137,15 @@ app.get("/api/v1/albums/:id/images", async (c) => {
     if (isNaN(albumId)) return c.json(warningBadRequest("Невалиден идентификатор"), 400);
 
     const limit = Math.min(Number(c.req.query("limit") ?? "20"), 100);
-    const cursor = c.req.query("cursor") ? Number(c.req.query("cursor")) : null;
-
-    const conditions = [eq(images.albumId, albumId)];
-    if (cursor !== null && !isNaN(cursor)) {
-      conditions.push(lt(images.id, cursor));
-    }
+    const offset = c.req.query("offset") ? Number(c.req.query("offset")) : 0;
 
     const rows = await db
       .select()
       .from(images)
-      .where(sql`${eq(images.albumId, albumId)}${cursor !== null ? sql` AND ${lt(images.id, cursor)}` : sql``}`)
-      .orderBy(desc(images.id))
-      .limit(limit + 1);
+      .where(eq(images.albumId, albumId))
+      .orderBy(sql`${images.takenAt} DESC NULLS LAST`, desc(images.id))
+      .limit(limit + 1)
+      .offset(offset);
 
     const hasMore = rows.length > limit;
     const data = hasMore ? rows.slice(0, limit) : rows;
@@ -164,7 +160,7 @@ app.get("/api/v1/albums/:id/images", async (c) => {
         size: row.size,
         createdAt: row.createdAt,
       })),
-      nextCursor: hasMore ? data[data.length - 1].id : null,
+      nextOffset: hasMore ? offset + limit : null,
       hasMore,
     };
 
