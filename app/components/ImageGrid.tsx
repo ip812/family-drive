@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Loader2, X, Trash2 } from 'lucide-react';
+import { Loader2, X, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { getV1, deleteV1 } from '../../http/client';
 import { isToast, isSuccess } from '../../toasts';
@@ -27,11 +27,13 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
-  const [selectedImage, setSelectedImage] = useState<ImageResponse | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [pendingDeleteImage, setPendingDeleteImage] = useState<ImageResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
+
+  const selectedImage = selectedIndex !== null ? images[selectedIndex] ?? null : null;
 
   const fetchImages = useCallback(async (cursor: number | null, reset = false) => {
     if (loadingRef.current) return;
@@ -62,18 +64,35 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
     setNextCursor(null);
     setHasMore(true);
     setInitialLoad(true);
+    setSelectedIndex(null);
     fetchImages(null, true);
   }, [albumId, refreshKey, fetchImages]);
 
-  // Close lightbox on Escape
+  // Keyboard navigation in lightbox
   useEffect(() => {
-    if (!selectedImage) return;
+    if (selectedIndex === null) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedImage(null);
+      if (e.key === 'Escape') {
+        setSelectedIndex(null);
+      } else if (e.key === 'ArrowLeft') {
+        setSelectedIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : prev));
+      } else if (e.key === 'ArrowRight') {
+        setSelectedIndex((prev) =>
+          prev !== null && prev < images.length - 1 ? prev + 1 : prev
+        );
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [selectedImage]);
+  }, [selectedIndex, images.length]);
+
+  // Preload next page when near the end of loaded images
+  useEffect(() => {
+    if (selectedIndex === null) return;
+    if (selectedIndex >= images.length - 3 && hasMore && !loadingRef.current) {
+      fetchImages(nextCursor);
+    }
+  }, [selectedIndex, images.length, hasMore, nextCursor, fetchImages]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -130,11 +149,11 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
     <>
       <div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-          {images.map((image) => (
+          {images.map((image, idx) => (
             <div
               key={image.id}
               className="group relative overflow-hidden rounded-lg bg-muted aspect-square cursor-pointer"
-              onClick={() => setSelectedImage(image)}
+              onClick={() => setSelectedIndex(idx)}
             >
               <img
                 src={`/api/v1/images/${image.r2Key}`}
@@ -148,7 +167,7 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
                 </div>
               )}
               <button
-                className="absolute top-1.5 right-1.5 bg-black/50 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all z-10"
+                className="absolute top-1.5 left-1.5 bg-black/50 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all z-10"
                 onClick={(e) => { e.stopPropagation(); setPendingDeleteImage(image); }}
                 title="Изтрий снимката"
               >
@@ -166,32 +185,60 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
         </div>
       </div>
 
-      {selectedImage && (
+      {selectedImage && selectedIndex !== null && (
         <div
           className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setSelectedImage(null)}
+          onClick={() => setSelectedIndex(null)}
         >
-          <div className="absolute top-4 right-4 flex gap-2">
+          {/* Top-left: delete */}
+          <button
+            className="absolute top-4 left-4 bg-black/50 hover:bg-red-600 text-white rounded-full p-2 transition-colors"
+            onClick={(e) => { e.stopPropagation(); setSelectedIndex(null); setPendingDeleteImage(selectedImage); }}
+            title="Изтрий снимката"
+          >
+            <Trash2 className="size-5" />
+          </button>
+
+          {/* Top-right: close */}
+          <button
+            className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+            onClick={() => setSelectedIndex(null)}
+          >
+            <X className="size-5" />
+          </button>
+
+          {/* Left arrow */}
+          {selectedIndex > 0 && (
             <button
-              className="bg-black/50 hover:bg-red-600 text-white rounded-full p-2 transition-colors"
-              onClick={(e) => { e.stopPropagation(); setSelectedImage(null); setPendingDeleteImage(selectedImage); }}
-              title="Изтрий снимката"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-3 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setSelectedIndex((i) => (i !== null ? i - 1 : i)); }}
             >
-              <Trash2 className="size-5" />
+              <ChevronLeft className="size-6" />
             </button>
+          )}
+
+          {/* Right arrow */}
+          {selectedIndex < images.length - 1 && (
             <button
-              className="bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
-              onClick={() => setSelectedImage(null)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-3 transition-colors"
+              onClick={(e) => { e.stopPropagation(); setSelectedIndex((i) => (i !== null ? i + 1 : i)); }}
             >
-              <X className="size-5" />
+              <ChevronRight className="size-6" />
             </button>
-          </div>
+          )}
+
+          {/* Image */}
           <img
             src={`/api/v1/images/${selectedImage.r2Key}`}
             alt={selectedImage.filename}
             className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           />
+
+          {/* Position indicator */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-3 py-1 rounded-full">
+            {selectedIndex + 1} / {images.length}{hasMore ? '+' : ''}
+          </div>
         </div>
       )}
 
