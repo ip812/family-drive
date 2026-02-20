@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '~/components/ui/button';
@@ -19,7 +18,6 @@ import { isToast } from '../../toasts';
 import type { AlbumRequest, AlbumResponse } from '../../types/albums';
 
 const AddAlbumDialog = () => {
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,7 +45,7 @@ const AddAlbumDialog = () => {
 
     setOpen(false);
     setName('');
-    navigate(`/albums/${result.id}`);
+    toast.success(`Албумът „${result.name}" е създаден`);
   };
 
   return (
