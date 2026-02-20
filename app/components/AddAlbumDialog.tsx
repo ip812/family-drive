@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '~/components/ui/button';
 import {
   Dialog,
@@ -40,7 +41,7 @@ const AddAlbumDialog = () => {
     setLoading(false);
 
     if (isToast(result)) {
-      setError(result.message);
+      toast.error(result.message);
       return;
     }
 

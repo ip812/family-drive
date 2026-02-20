@@ -19,7 +19,11 @@ export default function Home() {
   ) : (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
       {albums.map((album) => (
-        <AlbumCard key={album.id} album={album} />
+        <AlbumCard
+          key={album.id}
+          album={album}
+          onDelete={() => setAlbums((prev) => prev.filter((a) => a.id !== album.id))}
+        />
       ))}
     </div>
   );

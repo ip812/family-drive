@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
+import { Toaster } from "sonner";
 import AppLayout from "./routes/layout";
 import Home from "./routes/home";
 import AlbumDetail from "./routes/albums.$id";
@@ -17,5 +18,6 @@ createRoot(document.getElementById("root")!).render(
         </Route>
       </Routes>
     </BrowserRouter>
+    <Toaster richColors position="bottom-center" />
   </StrictMode>
 );
