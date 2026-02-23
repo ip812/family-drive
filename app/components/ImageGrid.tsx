@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Loader2, X, Trash2, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { Loader2, X, Trash2, ChevronLeft, ChevronRight, Play, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { getV1, deleteV1 } from '../../http/client';
 import { isToast, isSuccess } from '../../toasts';
@@ -213,13 +213,24 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
             <Trash2 className="size-5" />
           </button>
 
-          {/* Top-right: close */}
-          <button
-            className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
-            onClick={() => setSelectedIndex(null)}
-          >
-            <X className="size-5" />
-          </button>
+          {/* Top-right: download + close */}
+          <div className="absolute top-4 right-4 flex gap-2">
+            <a
+              href={`/api/v1/images/${selectedImage.r2Key}`}
+              download={selectedImage.filename}
+              className="bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+              title="Изтегли"
+            >
+              <Download className="size-5" />
+            </a>
+            <button
+              className="bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-colors"
+              onClick={() => setSelectedIndex(null)}
+            >
+              <X className="size-5" />
+            </button>
+          </div>
 
           {/* Left arrow */}
           {selectedIndex > 0 && (
