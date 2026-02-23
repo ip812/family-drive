@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Loader2, X, Trash2, ChevronLeft, ChevronRight, Play, Download } from 'lucide-react';
+import { Loader2, X, Trash2, ChevronLeft, ChevronRight, Play, Download, File } from 'lucide-react';
 import { toast } from 'sonner';
 import { getV1, deleteV1 } from '../../http/client';
 import { isToast, isSuccess } from '../../toasts';
@@ -167,6 +167,13 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
                     <Play className="size-8 text-white drop-shadow-lg" />
                   </div>
                 </>
+              ) : image.mediaType === 'file' ? (
+                <div className="h-full w-full flex flex-col items-center justify-center gap-2 p-3 bg-muted">
+                  <File className="size-10 text-muted-foreground" />
+                  <span className="text-xs text-center text-muted-foreground break-all line-clamp-3 leading-tight">
+                    {image.filename}
+                  </span>
+                </div>
               ) : (
                 <img
                   src={`/api/v1/images/${image.r2Key}`}
@@ -262,6 +269,22 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
               className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
+          ) : selectedImage.mediaType === 'file' ? (
+            <div
+              className="flex flex-col items-center gap-6 rounded-xl bg-card p-10 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <File className="size-20 text-muted-foreground" />
+              <p className="max-w-xs text-center text-sm font-medium break-all">{selectedImage.filename}</p>
+              <a
+                href={`/api/v1/images/${selectedImage.r2Key}`}
+                download={selectedImage.filename}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                <Download className="size-4" />
+                Изтегли
+              </a>
+            </div>
           ) : (
             <img
               src={`/api/v1/images/${selectedImage.r2Key}`}

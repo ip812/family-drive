@@ -157,7 +157,7 @@ app.get("/api/v1/albums/:id/images", async (c) => {
         filename: row.filename,
         takenAt: row.takenAt ?? null,
         size: row.size,
-        mediaType: (row.mediaType as 'image' | 'video'),
+        mediaType: (row.mediaType as 'image' | 'video' | 'file'),
         createdAt: row.createdAt,
       })),
       nextOffset: hasMore ? offset + limit : null,
@@ -220,9 +220,13 @@ app.post("/api/v1/albums/:id/images", async (c) => {
     // Prepare per-file metadata synchronously
     const fileEntries = files.map((file, i) => {
       const meta = metadataList[i] ?? null;
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-      const contentType = contentTypeMap[ext] ?? "image/jpeg";
-      const mediaType: 'image' | 'video' = contentType.startsWith("video/") ? "video" : "image";
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "bin";
+      const contentType = file.type || contentTypeMap[ext] || "application/octet-stream";
+      const mediaType: 'image' | 'video' | 'file' = contentType.startsWith("video/")
+        ? "video"
+        : contentType.startsWith("image/")
+        ? "image"
+        : "file";
       const r2Key = `albums/${albumId}/${crypto.randomUUID()}.${ext}`;
       return { file, meta, contentType, mediaType, r2Key };
     });
@@ -259,7 +263,7 @@ app.post("/api/v1/albums/:id/images", async (c) => {
       filename: image.filename,
       takenAt: image.takenAt ?? null,
       size: image.size,
-      mediaType: (image.mediaType as 'image' | 'video'),
+      mediaType: (image.mediaType as 'image' | 'video' | 'file'),
       createdAt: image.createdAt,
     }));
 

@@ -67,7 +67,7 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
 
       // Parse EXIF (images only)
       let takenAt: string | null = null;
-      if (!file.type.startsWith('video/')) {
+      if (file.type.startsWith('image/')) {
         try {
           const exif = await exifr.parse(file, ['DateTimeOriginal']);
           if (exif?.DateTimeOriginal instanceof Date) {
@@ -113,7 +113,7 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
         ref={inputRef}
         type="file"
         multiple
-        accept="image/*,video/*"
+        accept="*"
         className="hidden"
         onChange={(e) => { if (e.target.files) handleFiles(e.target.files); }}
       />
@@ -123,7 +123,7 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
         variant="outline"
       >
         <Upload />
-        {active ? `Качване ${done} / ${total}…` : 'Добави медия'}
+        {active ? `Качване ${done} / ${total}…` : 'Добави файлове'}
       </Button>
 
       {queue.length > 0 && (
