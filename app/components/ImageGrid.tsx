@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Loader2, X, Trash2, ChevronLeft, ChevronRight, Play, Download, File } from 'lucide-react';
+import { Loader2, X, Trash2, ChevronLeft, ChevronRight, Play, Download, File, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { getV1, deleteV1 } from '../../http/client';
 import { isToast, isSuccess } from '../../toasts';
@@ -11,6 +11,18 @@ interface ImageGridProps {
   albumId: number;
   refreshKey?: number;
 }
+
+const TEXT_EXTENSIONS = new Set([
+  'txt', 'md', 'csv', 'json', 'xml', 'html', 'htm', 'css', 'js', 'ts',
+  'jsx', 'tsx', 'yaml', 'yml', 'toml', 'ini', 'cfg', 'log', 'sh', 'py',
+  'rb', 'go', 'rs', 'java', 'c', 'cpp', 'h', 'sql', 'env', 'gitignore',
+  'dockerfile',
+]);
+
+const isTextFile = (filename: string) => {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  return TEXT_EXTENSIONS.has(ext);
+};
 
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return null;
@@ -30,6 +42,8 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [pendingDeleteImage, setPendingDeleteImage] = useState<ImageResponse | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [textContent, setTextContent] = useState<string | null>(null);
+  const [textLoading, setTextLoading] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadingRef = useRef(false);
 
@@ -85,6 +99,20 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [selectedIndex, images.length]);
+
+  // Fetch text content when a text file is selected
+  useEffect(() => {
+    if (!selectedImage || selectedImage.mediaType !== 'file' || !isTextFile(selectedImage.filename)) {
+      setTextContent(null);
+      return;
+    }
+    setTextLoading(true);
+    setTextContent(null);
+    fetch(`/api/v1/images/${selectedImage.r2Key}`)
+      .then((res) => res.text())
+      .then((text) => { setTextContent(text); setTextLoading(false); })
+      .catch(() => { setTextContent(null); setTextLoading(false); });
+  }, [selectedImage?.id]);
 
   // Preload next page when near the end of loaded images
   useEffect(() => {
@@ -169,7 +197,10 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
                 </>
               ) : image.mediaType === 'file' ? (
                 <div className="h-full w-full flex flex-col items-center justify-center gap-2 p-3 bg-muted">
-                  <File className="size-10 text-muted-foreground" />
+                  {isTextFile(image.filename)
+                    ? <FileText className="size-10 text-muted-foreground" />
+                    : <File className="size-10 text-muted-foreground" />
+                  }
                   <span className="text-xs text-center text-muted-foreground break-all line-clamp-3 leading-tight">
                     {image.filename}
                   </span>
@@ -269,6 +300,34 @@ const ImageGrid = ({ albumId, refreshKey }: ImageGridProps) => {
               className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
+          ) : selectedImage.mediaType === 'file' && isTextFile(selectedImage.filename) ? (
+            <div
+              className="flex flex-col rounded-xl bg-card shadow-2xl overflow-hidden max-h-[85vh] max-w-[90vw] w-[720px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/50 shrink-0">
+                <FileText className="size-4 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium truncate flex-1">{selectedImage.filename}</span>
+                <a
+                  href={`/api/v1/images/${selectedImage.r2Key}`}
+                  download={selectedImage.filename}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Download className="size-3.5" />
+                  Изтегли
+                </a>
+              </div>
+              {textLoading ? (
+                <div className="flex justify-center items-center p-10">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <pre className="overflow-auto p-4 text-xs leading-relaxed font-mono whitespace-pre-wrap break-all">
+                  {textContent ?? 'Неуспешно зареждане на файла.'}
+                </pre>
+              )}
+            </div>
           ) : selectedImage.mediaType === 'file' ? (
             <div
               className="flex flex-col items-center gap-6 rounded-xl bg-card p-10 shadow-2xl"
