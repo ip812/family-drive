@@ -7,7 +7,7 @@ import { errorInternalServerError } from "../toasts/errors";
 import { warningBadRequest, warningNotFound } from "../toasts/warnings";
 import { successCreated, successOk } from "../toasts/success";
 import type { AlbumRequest, AlbumResponse } from "../types/albums";
-import type { ImageResponse, PaginatedImagesResponse, UploadImageMetadata } from "../types/images";
+import type { ImageResponse, PaginatedImagesResponse, UploadImageMetadata, UploadStartRequest, UploadStartResponse, UploadPartResponse, UploadConfirmRequest } from "../types/images";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -142,7 +142,7 @@ app.get("/api/v1/albums/:id/images", async (c) => {
       .select()
       .from(images)
       .where(eq(images.albumId, albumId))
-      .orderBy(sql`${images.takenAt} DESC NULLS FIRST`, desc(images.id))
+      .orderBy(sql`COALESCE(${images.takenAt}, ${images.createdAt}) DESC`, desc(images.id))
       .limit(limit + 1)
       .offset(offset);
 
@@ -316,6 +316,110 @@ app.delete("/api/v1/albums/:albumId/images/:imageId", async (c) => {
     return c.json(successOk("Снимката е изтрита"));
   } catch (err) {
     throw new ToastError(errorInternalServerError("Грешка при изтриване на снимката"));
+  }
+});
+
+// ─── Multipart upload ─────────────────────────────────────────────────────────
+
+app.post("/api/v1/albums/:id/upload/start", async (c) => {
+  try {
+    const db = drizzle(c.env.DB!);
+    const albumId = Number(c.req.param("id"));
+    if (isNaN(albumId)) return c.json(warningBadRequest("Невалиден идентификатор"), 400);
+
+    const albumRows = await db.select().from(albums).where(eq(albums.id, albumId)).limit(1);
+    if (albumRows.length === 0) return c.json(warningNotFound("Албумът не е намерен"), 404);
+
+    const bucket = c.env.BUCKET;
+    if (!bucket) return c.json(errorInternalServerError("Хранилището не е конфигурирано"), 500);
+
+    const body = await c.req.json<UploadStartRequest>();
+    if (!body.filename?.trim()) return c.json(warningBadRequest("Името на файла е задължително"), 400);
+
+    const ext = body.filename.split(".").pop()?.toLowerCase() ?? "bin";
+    const r2Key = `albums/${albumId}/${crypto.randomUUID()}.${ext}`;
+
+    const multipart = await bucket.createMultipartUpload(r2Key, {
+      httpMetadata: { contentType: body.contentType || "application/octet-stream" },
+      customMetadata: { albumId: String(albumId), filename: body.filename },
+    });
+
+    const result: UploadStartResponse = { uploadId: multipart.uploadId, r2Key };
+    return c.json(result);
+  } catch (err) {
+    throw new ToastError(errorInternalServerError("Грешка при стартиране на качването"));
+  }
+});
+
+app.put("/api/v1/albums/:id/upload/part", async (c) => {
+  try {
+    const bucket = c.env.BUCKET;
+    if (!bucket) return c.json(errorInternalServerError("Хранилището не е конфигурирано"), 500);
+
+    const uploadId = c.req.query("uploadId");
+    const r2Key = c.req.query("r2Key");
+    const partNumber = Number(c.req.query("partNumber"));
+
+    if (!uploadId || !r2Key || isNaN(partNumber) || partNumber < 1) {
+      return c.json(warningBadRequest("Невалидни параметри"), 400);
+    }
+
+    const multipart = bucket.resumeMultipartUpload(r2Key, uploadId);
+    const body = c.req.raw.body;
+    if (!body) return c.json(warningBadRequest("Липсващо тяло на заявката"), 400);
+
+    const uploadedPart = await multipart.uploadPart(partNumber, body);
+    const result: UploadPartResponse = { partNumber, etag: uploadedPart.etag };
+    return c.json(result);
+  } catch (err) {
+    throw new ToastError(errorInternalServerError("Грешка при качване на частта"));
+  }
+});
+
+app.post("/api/v1/albums/:id/upload/complete", async (c) => {
+  try {
+    const db = drizzle(c.env.DB!);
+    const albumId = Number(c.req.param("id"));
+    if (isNaN(albumId)) return c.json(warningBadRequest("Невалиден идентификатор"), 400);
+
+    const bucket = c.env.BUCKET;
+    if (!bucket) return c.json(errorInternalServerError("Хранилището не е конфигурирано"), 500);
+
+    const body = await c.req.json<UploadConfirmRequest>();
+    if (!body.uploadId || !body.r2Key || !body.filename || !body.parts?.length) {
+      return c.json(warningBadRequest("Невалидни данни за завършване"), 400);
+    }
+
+    const multipart = bucket.resumeMultipartUpload(body.r2Key, body.uploadId);
+    await multipart.complete(body.parts);
+
+    const [image] = await db
+      .insert(images)
+      .values({
+        albumId,
+        r2Key: body.r2Key,
+        filename: body.filename,
+        takenAt: body.takenAt ?? null,
+        size: body.size,
+        mediaType: body.mediaType,
+      })
+      .returning();
+
+    const result: ImageResponse = {
+      id: image.id,
+      albumId: image.albumId,
+      r2Key: image.r2Key,
+      filename: image.filename,
+      takenAt: image.takenAt ?? null,
+      size: image.size,
+      mediaType: image.mediaType as 'image' | 'video' | 'file',
+      createdAt: image.createdAt,
+    };
+
+    return c.json(result, 201);
+  } catch (err) {
+    if (err instanceof ToastError) throw err;
+    throw new ToastError(errorInternalServerError("Грешка при завършване на качването"));
   }
 });
 

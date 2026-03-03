@@ -2,9 +2,10 @@ import { useRef, useState, useEffect } from 'react';
 import { Upload, Loader2, CheckCircle2, XCircle, Circle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '~/components/ui/button';
-import { uploadV1 } from '../../http/client';
+import { postV1 } from '../../http/client';
 import { isToast } from '../../toasts';
-import type { ImageResponse } from '../../types/images';
+import type { ImageResponse, UploadStartRequest, UploadStartResponse, UploadPartResponse, UploadConfirmRequest } from '../../types/images';
+import type { Toast } from '../../toasts';
 
 type ItemStatus = 'pending' | 'uploading' | 'done' | 'error';
 
@@ -45,6 +46,58 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
     el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [queue]);
 
+  const CHUNK_SIZE = 95 * 1024 * 1024; // 95 MB — safely under the 100 MB Workers body limit
+
+  const uploadChunked = async (file: File, takenAt: string | null): Promise<boolean> => {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
+    const contentTypeMap: Record<string, string> = {
+      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif',
+      webp: 'image/webp', heic: 'image/heic', heif: 'image/heif',
+      mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm',
+      avi: 'video/x-msvideo', mkv: 'video/x-matroska',
+    };
+    const contentType = file.type || contentTypeMap[ext] || 'application/octet-stream';
+
+    // Step 1: start multipart upload
+    const startRes = await postV1<UploadStartRequest, UploadStartResponse | Toast>(
+      `/albums/${albumId}/upload/start`,
+      { filename: file.name, contentType, size: file.size },
+    );
+    if (isToast(startRes)) return false;
+    const { uploadId, r2Key } = startRes;
+
+    // Step 2: upload parts
+    const parts: { partNumber: number; etag: string }[] = [];
+    const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      try {
+        const res = await fetch(
+          `/api/v1/albums/${albumId}/upload/part?uploadId=${encodeURIComponent(uploadId)}&r2Key=${encodeURIComponent(r2Key)}&partNumber=${i + 1}`,
+          { method: 'PUT', body: chunk },
+        );
+        if (!res.ok) return false;
+        const part: UploadPartResponse = await res.json();
+        parts.push(part);
+      } catch {
+        return false;
+      }
+    }
+
+    // Step 3: complete
+    const mediaType: 'image' | 'video' | 'file' = contentType.startsWith('video/')
+      ? 'video'
+      : contentType.startsWith('image/')
+      ? 'image'
+      : 'file';
+
+    const confirmRes = await postV1<UploadConfirmRequest, ImageResponse | Toast>(
+      `/albums/${albumId}/upload/complete`,
+      { uploadId, r2Key, filename: file.name, takenAt, size: file.size, mediaType, parts },
+    );
+    return !isToast(confirmRes);
+  };
+
   const handleFiles = async (files: FileList) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
@@ -78,20 +131,13 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
         }
       }
 
-      // Upload single file
-      const formData = new FormData();
-      formData.append('files', file);
-      formData.append('metadata', JSON.stringify([{ filename: file.name, takenAt }]));
-
-      const result = await uploadV1<ImageResponse[]>(`/albums/${albumId}/images`, formData);
+      const ok = await uploadChunked(file, takenAt);
 
       setQueue((prev) =>
-        prev.map((item, idx) =>
-          idx === i ? { ...item, status: isToast(result) ? 'error' : 'done' } : item
-        )
+        prev.map((item, idx) => (idx === i ? { ...item, status: ok ? 'done' : 'error' } : item))
       );
 
-      if (!isToast(result)) totalUploaded++;
+      if (ok) totalUploaded++;
     }
 
     setActive(false);
@@ -101,7 +147,7 @@ const UploadButton = ({ albumId, onUploaded }: UploadButtonProps) => {
       onUploaded();
     }
     if (errors > 0) {
-      toast.error(`${errors} снимки не успяха да се качат`);
+      toast.error(`${errors} файла не успяха да се качат`);
     }
 
     if (inputRef.current) inputRef.current.value = '';
